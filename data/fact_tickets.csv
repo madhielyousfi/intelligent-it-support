@@ -1,0 +1,7 @@
+ticket_id,title,priority,status,ai_category,ai_confidence,customer,company,device,category,technician,created_at,updated_at,resolved_at,closed_at,hours_to_resolve
+1,VPN drops,HIGH,CLOSED,,,Acme Corp,Acme,ACME-LT-01,Access,Technician,2026-09-20 17:55:53.646951+00:00,2026-09-20 17:59:13.770208+00:00,2026-09-20 17:59:13.743811+00:00,2026-09-20 17:59:13.776545+00:00,0.05558246111111111111
+2,bad jump,LOW,NEW,,,Reject Co,,,,,2026-09-20 17:59:13.516238+00:00,2026-09-20 17:59:13.516238+00:00,,,
+3,M1 printer down,HIGH,CLOSED,,,Milestone1 Co,,M1-PC-01,,Technician,2026-09-20 18:02:34.614420+00:00,2026-09-20 18:02:34.763494+00:00,2026-09-20 18:02:34.741084+00:00,2026-09-20 18:02:34.771410+00:00,0.000035184444444444444444
+4,Mailbox quota exceeded,MEDIUM,NEW,,,AI Co,,,,,2026-09-20 20:50:26.004978+00:00,2026-09-20 20:50:26.004978+00:00,,,
+5,Mailbox quota exceeded,MEDIUM,NEW,Email,0.317,AI Co 2,,,Network,,2026-09-20 20:50:45.332999+00:00,2026-09-20 20:50:47.019373+00:00,,,
+6,mailbox full,LOW,NEW,,,AI Co 2,,,Network,,2026-09-20 20:50:46.977637+00:00,2026-09-20 20:50:46.977637+00:00,,,
