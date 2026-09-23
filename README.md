@@ -118,6 +118,36 @@ and starts the API and frontend:
 [platform run guide](docs/RUNNING_ON_WINDOWS_AND_LINUX.md). Docker Compose is
 the recommended setup for both platforms.
 
+### Run on Windows
+
+Open **PowerShell**, make sure Docker Desktop is running, then run:
+
+```powershell
+git clone https://github.com/madhielyousfi/intelligent-it-support.git
+cd intelligent-it-support
+docker compose up --build
+```
+
+### Run on Linux
+
+Open a terminal with Docker Engine running, then run:
+
+```bash
+git clone https://github.com/madhielyousfi/intelligent-it-support.git
+cd intelligent-it-support
+./run.sh
+```
+
+If you do not want the browser to open automatically on Linux, use:
+
+```bash
+./run.sh --no-browser
+```
+
+For both systems, open <http://localhost:8080> once startup completes. See the
+[full Windows/Linux guide](docs/RUNNING_ON_WINDOWS_AND_LINUX.md) for native
+development, daily Docker commands, reset instructions, and troubleshooting.
+
 ```bash
 docker compose build
 docker compose up
