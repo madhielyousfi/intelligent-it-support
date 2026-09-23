@@ -1,5 +1,7 @@
 # Intelligent IT Support
 
+[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb)
+
 A FastAPI, React, and PostgreSQL IT Service Management (ITSM) application.
 It includes the completed transactional workflow and Phase 2 support tools:
 AI category suggestions, knowledge-base recommendations, screenshot OCR, ETL
@@ -96,6 +98,17 @@ npm run dev
 
 Open the UI at `http://localhost:5173`, and Swagger at
 `http://localhost:8000/docs`.
+
+## Google Colab demo
+
+Use the **Open in Google Colab** button above to run a temporary FastAPI,
+PostgreSQL, AI-classifier, and OCR demo directly from GitHub. The notebook runs
+Alembic migrations, seeds the current development data, trains the classifier,
+and opens API documentation through Colab's port proxy.
+
+Colab is intended for API demonstrations and learning only: its data is
+temporary, it does not host the React interface, and it is not a deployment
+environment.
 
 ## Docker
 
