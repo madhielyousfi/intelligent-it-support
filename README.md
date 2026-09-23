@@ -101,14 +101,13 @@ Open the UI at `http://localhost:5173`, and Swagger at
 
 ## Google Colab demo
 
-Use the **Open in Google Colab** button above to run a temporary FastAPI,
-PostgreSQL, AI-classifier, and OCR demo directly from GitHub. The notebook runs
-Alembic migrations, seeds the current development data, trains the classifier,
-and opens API documentation through Colab's port proxy.
+Use the **Open in Google Colab** button above to run a temporary React,
+FastAPI, PostgreSQL, AI-classifier, and OCR demo directly from GitHub. The
+notebook runs Alembic migrations, seeds the current development data, trains
+the classifier, and embeds the full login UI through Colab's port proxy.
 
-Colab is intended for API demonstrations and learning only: its data is
-temporary, it does not host the React interface, and it is not a deployment
-environment.
+Colab is intended for demonstrations and learning only: its data is temporary
+and it is not a deployment environment.
 
 ## Docker
 
