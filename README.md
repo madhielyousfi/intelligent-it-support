@@ -1,6 +1,6 @@
 # Intelligent IT Support
 
-[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb)
+[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb?forceReload=true)
 
 A FastAPI, React, and PostgreSQL IT Service Management (ITSM) application.
 It includes the completed transactional workflow and Phase 2 support tools:
