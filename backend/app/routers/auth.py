@@ -13,7 +13,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _authenticate(db: Session, email: str, password: str) -> User | None:
     user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not user.is_active or not verify_password(password, user.password_hash):
         return None
     return user
 

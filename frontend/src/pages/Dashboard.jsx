@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api.js";
 
-const PRIORITY_COLORS = { URGENT: "#c0392b", HIGH: "#e67e22", MEDIUM: "var(--ink)", LOW: "var(--text-faint)" };
+const PRIORITY_COLORS = { CRITICAL: "#c0392b", HIGH: "#e67e22", MEDIUM: "var(--ink)", LOW: "var(--text-faint)" };
 
 export default function Dashboard() {
   const [data, setData] = useState(null);

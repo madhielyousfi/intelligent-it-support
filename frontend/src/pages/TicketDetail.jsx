@@ -48,6 +48,7 @@ export default function TicketDetail() {
   };
 
   const canAssign = me && (me.role === "admin" || me.role === "manager");
+  const canWork = me && (me.role === "admin" || me.role === "manager" || (me.role === "technician" && ticket.technician_id === me.id));
 
   if (error && !ticket) return <p className="error-msg">{error}</p>;
   if (!ticket) return <p style={{ color: "var(--text-muted)" }}>Loading…</p>;
@@ -86,19 +87,19 @@ export default function TicketDetail() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Customer</span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>#{ticket.customer_id}</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.customer_name}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Device</span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.device_id ?? "—"}</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.device_name || "—"}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Category</span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.category_id ?? "—"}</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.category_name || "—"}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "var(--text-muted)", fontSize: 14 }}>Technician</span>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.technician_id ?? "—"}</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{ticket.technician_name || "Unassigned"}</span>
             </div>
             {ticket.ai_category && (
               <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -130,7 +131,7 @@ export default function TicketDetail() {
         </div>
       )}
 
-      {statusButtons.length > 0 && (
+      {canWork && statusButtons.length > 0 && (
         <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
           {statusButtons.map((s) => (
             <button key={s} className="btn-outline" onClick={() => run(() => api.changeStatus(ticket.id, s))}>
@@ -140,7 +141,7 @@ export default function TicketDetail() {
         </div>
       )}
 
-      {showResolve && (
+      {canWork && showResolve && (
         <div className="card" style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 12 }}>Resolve ticket</p>
           <form onSubmit={(e) => { e.preventDefault(); run(() => api.resolveTicket(ticket.id, resolution)); }} style={{ display: "flex", gap: 12 }}>

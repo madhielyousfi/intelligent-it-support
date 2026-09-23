@@ -4,8 +4,10 @@ import { api } from "../services/api.js";
 
 export default function Customers() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({ name: "", email: "", company: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "" });
   const [error, setError] = useState("");
+  let canManage = false;
+  try { canManage = JSON.parse(atob(localStorage.getItem("token").split(".")[1])).role === "admin"; } catch {}
 
   const load = () => api.listCustomers().then(setItems).catch((e) => setError(String(e.message).slice(0, 200)));
 
@@ -16,7 +18,7 @@ export default function Customers() {
     setError("");
     try {
       await api.createCustomer(form);
-      setForm({ name: "", email: "", company: "" });
+      setForm({ name: "", email: "", phone: "", company: "", address: "" });
       load();
     } catch (err) { setError(String(err.message).slice(0, 300)); }
   };
@@ -30,15 +32,17 @@ export default function Customers() {
 
       {error && <p className="error-msg" style={{ marginBottom: 16 }}>{error}</p>}
 
-      <div className="card" style={{ marginBottom: 32 }}>
+      {canManage && <div className="card" style={{ marginBottom: 32 }}>
         <h5 style={{ marginBottom: 16 }}>Create customer</h5>
         <form onSubmit={create} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required style={{ flex: "1 1 180px" }} />
           <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ flex: "1 1 180px" }} />
+          <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ flex: "1 1 140px" }} />
           <input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} style={{ flex: "1 1 180px" }} />
+          <input placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={{ flex: "1 1 220px" }} />
           <button type="submit" className="btn-primary">Create</button>
         </form>
-      </div>
+      </div>}
 
       <div className="table-wrap">
         <table>
@@ -47,6 +51,7 @@ export default function Customers() {
               <th>Name</th>
               <th>Email</th>
               <th>Company</th>
+              <th>Phone</th>
               <th>Created</th>
             </tr>
           </thead>
@@ -56,6 +61,7 @@ export default function Customers() {
                 <td><Link to={`/customers/${c.id}`}>{c.name}</Link></td>
                 <td style={{ color: "var(--text-muted)" }}>{c.email || "—"}</td>
                 <td style={{ color: "var(--text-muted)" }}>{c.company || "—"}</td>
+                <td style={{ color: "var(--text-muted)" }}>{c.phone || "—"}</td>
                 <td style={{ color: "var(--text-faint)", fontSize: 14 }}>{new Date(c.created_at).toLocaleDateString()}</td>
               </tr>
             ))}

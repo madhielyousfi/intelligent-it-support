@@ -17,6 +17,8 @@ def _ai_dir() -> str:
 sys.path.insert(0, _ai_dir())
 
 router = APIRouter(prefix="/ocr", tags=["ocr"])
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp"}
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 
 @router.post("/extract")
@@ -24,10 +26,12 @@ async def extract(
     file: UploadFile = File(...),
     _: User = Depends(get_current_user),
 ):
-    if not (file.content_type or "").startswith("image/"):
-        raise HTTPException(status_code=400, detail="file must be an image")
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="file must be a PNG, JPEG, or WebP image")
     data = await file.read()
-    if len(data) > 5 * 1024 * 1024:
+    if not data:
+        raise HTTPException(status_code=400, detail="image is empty")
+    if len(data) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=400, detail="image too large (max 5MB)")
     try:
         from ocr import extract_text
@@ -35,8 +39,8 @@ async def extract(
         raise HTTPException(status_code=503, detail="OCR module unavailable")
     try:
         text = extract_text(data)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="not a readable image")
-    except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    return {"text": text}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="OCR service could not process this image")
+    return {"text": text, "characters": len(text)}

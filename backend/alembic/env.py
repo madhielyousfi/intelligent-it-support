@@ -1,4 +1,4 @@
-"""Alembic env — full autogenerate wiring lands in Session 2; Session 1 uses init_db.create_all."""
+"""Alembic environment for the production ITSM schema."""
 from logging.config import fileConfig
 
 from alembic import context
@@ -6,12 +6,14 @@ from sqlalchemy import engine_from_config, pool
 
 from app.models import Base  # noqa: F401
 import app.models  # noqa: F401
+from app.core.config import settings
 
 config = context.config
-if config.config_file_name is not None:
+if config.config_file_name is not None and config.get_section("formatters"):
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:

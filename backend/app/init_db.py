@@ -1,14 +1,12 @@
-"""Create all tables (Session 1 shortcut). Alembic takes over from Session 2."""
+"""Deprecated compatibility entry point.
 
-from app.core.database import engine
-from app.models import Base  # noqa: F401 — registers all entities
+Use ``alembic upgrade head`` to create or update the schema.  The application
+does not use SQLAlchemy ``create_all`` for production databases.
+"""
 
 
 def main() -> None:
-    import app.models  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
-    print("Tables created.")
+    raise SystemExit("Use 'alembic upgrade head' instead of python -m app.init_db")
 
 
 if __name__ == "__main__":

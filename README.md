@@ -1,250 +1,225 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/FastAPI-0.141-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?style=flat-square&logo=scikit-learn&logoColor=white" alt="scikit-learn">
-  <img src="https://img.shields.io/badge/Docker-24-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
-  <a href="https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab"></a>
-</p>
+# Intelligent IT Support
 
-<h1 align="center">Intelligent IT Support</h1>
+A FastAPI, React, and PostgreSQL IT Service Management (ITSM) application.
+It includes the completed transactional workflow and Phase 2 support tools:
+AI category suggestions, knowledge-base recommendations, screenshot OCR, ETL
+reporting exports, and a Power BI handoff kit.
 
-<p align="center">
-  A full-stack ITSM platform with AI ticket classification, OCR, knowledge base, and Power BI data mart.
-</p>
+## Project status
 
----
-
-## Overview
-
-Built as a 10-session incremental build, from empty repo to production-ready Docker deployment.
-
-```
-Login → Create customer → Register device → Create ticket → Assign technician
-→ Change status → Resolve ticket → Dashboard metrics update
-```
+The project is functionally complete through Phase 2. Before a public
+production deployment, rotate development credentials, set a strong
+`SECRET_KEY`, configure HTTPS/CORS for the deployment domain, and arrange
+PostgreSQL backups and scheduled ETL/model-retraining jobs.
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  React Frontend (nginx)         :8080                        │
-│  Mobbin design system · Inter · stadium-pill · shadow-free   │
-├──────────────────────────────────────────────────────────────┤
-│  FastAPI Backend                :8000                        │
-│  JWT auth · role guards · state machine · CORS               │
-│  ├── /auth, /customers, /devices, /tickets, /dashboard      │
-│  ├── /articles (knowledge base), /ocr (screenshot extract)  │
-│  └── /users/technicians, /categories                        │
-├──────────────────────────────────────────────────────────────┤
-│  PostgreSQL 16                  :5433                        │
-│  8 tables · views → ETL → CSV → Power BI                    │
-├──────────────────────────────────────────────────────────────┤
-│  AI Layer                                                   │
-│  ├── ticket_classifier.pkl (TF-IDF + LogReg, retrainable)   │
-│  └── ocr.py (Tesseract, independent service)                │
-└──────────────────────────────────────────────────────────────┘
+```text
+React UI → FastAPI (JWT + role authorization) → PostgreSQL
+                                      └── Alembic migrations
 ```
 
-## Quick Start
+The repository also retains its AI, OCR, ETL, Power BI, and Docker components.
+`ai_category` and `ai_confidence` remain nullable whenever no trained model is
+available.
 
-### Option 1 — Google Colab (zero setup)
+## Technology
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb)
+- React 18 + Vite
+- FastAPI + SQLAlchemy + Pydantic
+- PostgreSQL 16 + Alembic
+- JWT bearer authentication + bcrypt password hashes
+- Pytest + HTTPX
 
-Runs the full backend + database + AI in a free Colab runtime.
+## Roles and permissions
 
-### Option 2 — Docker Compose (recommended)
+| Role | Access |
+| --- | --- |
+| Customer | Own profile/devices/tickets; may create tickets only for its linked customer record |
+| Technician | Only assigned tickets and their related customers/devices; may progress and resolve them |
+| Manager | All tickets/customers/devices/categories, assignment, and global dashboard |
+| Admin | Full management of users, customers, devices, categories, tickets, and dashboard |
+
+The backend, not the frontend, enforces these rules.
+
+## Ticket workflow
+
+```text
+NEW → ASSIGNED → IN_PROGRESS → WAITING_CUSTOMER → IN_PROGRESS → RESOLVED → CLOSED
+```
+
+`IN_PROGRESS → RESOLVED` and `WAITING_CUSTOMER → RESOLVED` are also valid.
+Invalid transitions are rejected by the API. Every ticket action creates a
+`ticket_history` record.
+
+## Configuration
+
+Copy the backend example environment file and set a secure secret outside local
+development:
 
 ```bash
-git clone https://github.com/madhielyousfi/intelligent-it-support.git
-cd intelligent-it-support
-docker compose up -d --build
-```
-
-| Service  | URL                  | Purpose            |
-|----------|----------------------|--------------------|
-| Frontend | http://localhost:8080 | React UI           |
-| Backend  | http://localhost:8000 | FastAPI + Swagger  |
-| Database | localhost:5433       | PostgreSQL 16      |
-
-### Option 3 — Native development
-
-```bash
-# Database (Docker only)
-docker start itsm-postgres || docker run -d --name itsm-postgres \
-  -e POSTGRES_USER=itsm -e POSTGRES_PASSWORD=itsm_dev_password \
-  -e POSTGRES_DB=itsm_db -p 5433:5432 postgres:16
-
-# Backend
 cd backend
-pip install -r requirements.txt
-python -m app.init_db && python -m app.seed
-uvicorn app.main:app --reload
-
-# Frontend (separate terminal)
-cd frontend
-npm install && npm run dev
+cp .env.example .env
 ```
 
-## Credentials
+Required variables:
 
-| Role       | Email              | Password  | Access                        |
-|------------|--------------------|-----------|-------------------------------|
-| Admin      | admin@itsm.local   | admin123  | Everything                    |
-| Manager    | manager@itsm.local | manager123| Dashboard, customers, tickets |
-| Technician | tech@itsm.local    | tech123   | Assigned tickets, status      |
-
-## Features
-
-### Core ITSM
-- JWT authentication with role-based access control
-- Customer & device management with relational integrity
-- Ticket lifecycle with enforced state machine:
-
-```
-NEW → ASSIGNED → IN_PROGRESS → WAITING_CUSTOMER | RESOLVED → CLOSED
+```env
+DATABASE_URL=postgresql+psycopg://itsm:itsm_dev_password@localhost:5433/itsm_db
+SECRET_KEY=replace-with-a-long-random-secret
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
-Invalid transitions return `400`. Every action writes to `ticket_history`.
+## Native development
 
-### AI-Powered
-- Auto-classification via TF-IDF + LogisticRegression at ticket creation
-- Confidence scoring — low-confidence predictions leave fields null
-- Manager override via `PATCH /tickets/{id}/recategorize`
-- Retrainable: `python ai/train.py` incorporates new labeled tickets
-
-### Knowledge Base
-- Articles scoped to categories
-- Similar tickets — same-category lookup on ticket detail
-- Suggested solutions — past resolutions + articles surfaced automatically
-
-### OCR
-- Standalone endpoint: `POST /ocr/extract` for any screenshot
-- Ticket integration: file upload on create form appends extracted text
-
-### Data Mart & Power BI
-- SQL views: `v_fact_tickets`, `v_tickets_by_status`, `v_tickets_by_category`, `v_avg_hours_to_resolve`
-- CSV export: `python etl/run.py` snapshots all views to `data/*.csv`
-- Power BI: connect directly to PostgreSQL or import the CSVs
-
-## Project Structure
-
-```
-intelligent-it-support/
-├── ai/
-│   ├── train.py              # Classifier training
-│   ├── ocr.py                # Tesseract wrapper
-│   └── ticket_classifier.pkl # Trained model
-├── backend/
-│   ├── app/
-│   │   ├── core/             # config, database, security
-│   │   ├── models/           # SQLAlchemy: 8 tables
-│   │   ├── schemas/          # Pydantic models
-│   │   ├── routers/          # FastAPI endpoints (11 modules)
-│   │   ├── services/         # Auth deps, classifier
-│   │   ├── main.py           # App + CORS
-│   │   ├── init_db.py        # create_all
-│   │   └── seed.py           # Dev users + categories
-│   ├── Dockerfile
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── pages/            # Login, Dashboard, Customers, Tickets
-│   │   ├── components/       # Layout (sidebar nav)
-│   │   ├── services/         # API client
-│   │   └── index.css         # Mobbin design tokens
-│   ├── DESIGN.md             # Mobbin reference
-│   ├── Dockerfile            # Multi-stage build
-│   └── nginx.conf            # API proxy
-├── database/
-│   ├── mart.sql              # Data mart views
-│   └── powerbi_README.md     # Power BI guide
-├── etl/
-│   └── run.py                # Views → CSV
-├── colab/
-│   └── itsm_quickstart.ipynb # One-click Colab
-├── docker-compose.yml
-└── README.md
-```
-
-## API Endpoints
-
-| Method | Path                         | Auth          | Description                  |
-|--------|------------------------------|---------------|------------------------------|
-| GET    | `/health`                    | —             | Health check                 |
-| POST   | `/auth/login`                | —             | JWT login (JSON)             |
-| POST   | `/auth/token`                | —             | JWT login (OAuth2 form)      |
-| GET    | `/auth/me`                   | Bearer        | Current user profile         |
-| POST   | `/customers`                 | Admin/Manager | Create customer              |
-| GET    | `/customers`                 | Any           | List customers               |
-| GET    | `/customers/{id}`            | Any           | Customer details             |
-| POST   | `/devices`                   | Admin/Manager | Register device              |
-| GET    | `/devices`                   | Any           | List devices                 |
-| GET    | `/devices/{id}`              | Any           | Device details               |
-| POST   | `/tickets`                   | Any           | Create ticket (auto AI)      |
-| GET    | `/tickets`                   | Any           | List tickets (status filter) |
-| GET    | `/tickets/{id}`              | Any           | Ticket detail + history      |
-| PATCH  | `/tickets/{id}/assign`       | Admin/Manager | Assign technician            |
-| PATCH  | `/tickets/{id}/status`       | Tech/Admin    | Change status (enforced)     |
-| PATCH  | `/tickets/{id}/resolve`      | Tech/Admin    | Resolve with text            |
-| PATCH  | `/tickets/{id}/recategorize` | Admin/Manager | Override AI category         |
-| GET    | `/tickets/{id}/similar`      | Any           | Similar tickets              |
-| GET    | `/tickets/{id}/suggestions`  | Any           | Resolutions + articles       |
-| GET    | `/users/technicians`         | Admin/Manager | List technicians             |
-| GET    | `/categories`                | Any           | List categories              |
-| POST   | `/articles`                  | Admin/Manager | Create KB article            |
-| GET    | `/articles`                  | Any           | List articles                |
-| POST   | `/ocr/extract`               | Any           | OCR image to text            |
-| GET    | `/dashboard/stats`           | Admin/Manager | Total/open/resolved/closed   |
-
-## State Machine
-
-```
-         ┌──────────┐
-         │   NEW    │
-         └────┬─────┘
-              │ assign
-         ┌────▼──────┐
-         │ ASSIGNED  │
-         └────┬──────┘
-              │ status
-         ┌────▼───────────┐
-         │  IN_PROGRESS   │◄─────────────┐
-         └──┬─────────┬───┘              │
-            │         │ status            │ status
-            │ resolve │ (WAITING)         │ (IN_PROGRESS)
-            │         └────┐              │
-         ┌──▼──────────┐   │         ┌────┘
-         │  RESOLVED   │   └─────────┘
-         └──────┬──────┘
-                │ status
-         ┌──────▼──────┐
-         │   CLOSED    │
-         └─────────────┘
-```
-
-## Retrain the Classifier
+Start PostgreSQL (the Compose database service is convenient for local use),
+then install and run the backend:
 
 ```bash
-python ai/train.py
-# 25 bootstrap samples + all labeled tickets from Postgres → ticket_classifier.pkl
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+python -m app.seed
+uvicorn app.main:app --reload
 ```
 
-## Tech Stack
+In a second terminal:
 
-| Layer    | Technology                                       |
-|----------|--------------------------------------------------|
-| Frontend | React 18, React Router 6, Vite 5, Mobbin design |
-| Backend  | FastAPI 0.141, SQLAlchemy 2.0, Pydantic 2.13     |
-| Auth     | JWT (python-jose), bcrypt, OAuth2 bearer         |
-| Database | PostgreSQL 16, Alembic migrations                |
-| AI       | scikit-learn 1.9 (TF-IDF + LogReg), joblib       |
-| OCR      | Tesseract, pytesseract, Pillow                   |
-| ETL      | SQL views → Python CSV → Power BI                |
-| Deploy   | Docker Compose, nginx reverse proxy              |
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## License
+Open the UI at `http://localhost:5173`, and Swagger at
+`http://localhost:8000/docs`.
 
-MIT
+## Docker
+
+Docker starts PostgreSQL, applies the Alembic migration, seeds development data,
+and starts the API and frontend:
+
+```bash
+docker compose build
+docker compose up
+```
+
+Or use the helper script, which builds the stack, waits for the FastAPI health
+endpoint, and opens the browser:
+
+```bash
+./run.sh
+# Useful for servers or repeated starts:
+./run.sh --no-browser --no-build
+```
+
+Frontend: `http://localhost:8080`
+API documentation: `http://localhost:8000/docs`
+
+Development accounts:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@example.com` | `admin123` |
+| Manager | `manager@example.com` | `manager123` |
+| Technician | `tech@example.com` | `tech123` |
+| Customer | `customer@example.com` | `customer123` |
+
+The seed command creates eight default categories, three customers, five
+devices, eight internally consistent sample tickets, and starter
+knowledge-base articles.
+
+## Day-to-day operations
+
+```bash
+# Follow application logs
+docker compose logs -f
+
+# Retrain the AI model from bootstrap + categorized ticket data
+docker compose exec backend python /app/ai/train.py
+
+# Refresh Power BI CSV snapshots from reporting views
+docker compose exec backend python /app/etl/run.py
+
+# Stop the local stack (keeps Docker volumes/data)
+docker compose down
+```
+
+## Tests
+
+```bash
+cd backend
+pytest -q
+```
+
+The suite covers authentication, user/customer/device/category management,
+ticket validation and filtering, authorization boundaries, assignment history,
+workflow state transitions, resolution/closure timestamps, and live dashboard
+counts.
+
+For a running API connected to PostgreSQL, execute the HTTP acceptance flow:
+
+```bash
+cd backend
+ITSM_BASE_URL=http://127.0.0.1:8000 python tests/e2e_http.py
+```
+
+## Milestone 1 acceptance flow
+
+1. Sign in as Admin and create a technician, customer, and device.
+2. Create a category-linked ticket. It starts as `NEW`.
+3. Assign the technician (`ASSIGNED`).
+4. Sign in as that technician and verify only assigned tickets are listed.
+5. Move the ticket through `IN_PROGRESS`, `WAITING_CUSTOMER`, `IN_PROGRESS`,
+   `RESOLVED`, and `CLOSED`.
+6. Verify ticket history and dashboard metrics reflect every action.
+
+## Phase 2: AI category suggestions
+
+The ticket form can suggest a category from its title and description. The
+suggestion never replaces the user-selected category. On ticket creation, the
+prediction and confidence are stored in the nullable AI fields for later review.
+
+Train or retrain the local model after collecting better ticket data:
+
+```bash
+# Native development, from the repository root
+python ai/train.py
+
+# Docker; the trained model is retained in the itsm-ai-models volume
+docker compose exec backend python /app/ai/train.py
+```
+
+The model is automatically detected after training; restarting the API is not
+needed.
+
+Resolved ticket fixes are stored as reusable solutions. Ticket details use
+same-category solutions, similar tickets, and knowledge-base articles as
+suggestions. Managers and administrators can manage articles at
+`/knowledge-base`; all signed-in roles can read them.
+
+Ticket creation also accepts PNG, JPEG, and WebP screenshots. OCR extracts
+text locally and appends it to the draft description; uploads are limited to
+5 MB and 16 million pixels.
+
+## ETL reporting and Power BI
+
+Alembic creates reporting views for ticket facts, status/category/priority
+counts, resolution time, and daily ticket volume. Export a consistent CSV
+snapshot after the stack is running:
+
+```bash
+docker compose exec backend python /app/etl/run.py
+```
+
+The CSV files are written to `data/` for Power BI import. For a direct
+PostgreSQL connection and suggested visuals, see
+[`database/powerbi_README.md`](database/powerbi_README.md).
+
+Power BI handoff assets are ready in `database/powerbi/`: paste
+`itsm_powerquery.m` into Power Query, create measures from `itsm_measures.dax`,
+and follow `REPORT_LAYOUT.md`. This keeps database credentials and generated
+`.pbix` files outside version control.

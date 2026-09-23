@@ -9,6 +9,7 @@ export default function TicketCreate() {
   const [form, setForm] = useState({ customer_id: "", device_id: "", category_id: "", title: "", description: "", priority: "MEDIUM" });
   const [error, setError] = useState("");
   const [ocrMsg, setOcrMsg] = useState("");
+  const [aiSuggestion, setAiSuggestion] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,6 +22,19 @@ export default function TicketCreate() {
     if (form.customer_id) api.listDevices(form.customer_id).then(setDevices).catch(() => {});
     else setDevices([]);
   }, [form.customer_id]);
+
+  useEffect(() => {
+    const title = form.title.trim();
+    const description = form.description.trim();
+    if (title.length < 4 || description.length < 12) {
+      setAiSuggestion(null);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      api.predictTicketCategory({ title, description }).then(setAiSuggestion).catch(() => setAiSuggestion(null));
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [form.title, form.description]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -66,16 +80,16 @@ export default function TicketCreate() {
 
         <div style={{ display: "flex", gap: 12 }}>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Device</label>
-            <select value={form.device_id} onChange={set("device_id")}>
-              <option value="">No device</option>
-              {devices.map((d) => <option key={d.id} value={d.id}>{d.hostname}</option>)}
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Device *</label>
+            <select value={form.device_id} onChange={set("device_id")} required>
+              <option value="">Select device</option>
+              {devices.map((d) => <option key={d.id} value={d.id}>{d.manufacturer} {d.model}</option>)}
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Category</label>
-            <select value={form.category_id} onChange={set("category_id")}>
-              <option value="">No category</option>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Category *</label>
+            <select value={form.category_id} onChange={set("category_id")} required>
+              <option value="">Select category</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
@@ -91,11 +105,24 @@ export default function TicketCreate() {
           <textarea placeholder="Detailed description of the problem" value={form.description} onChange={set("description")} required rows={4} />
         </div>
 
+        {aiSuggestion?.category && (
+          <div className="card-soft" style={{ padding: 16 }}>
+            <p style={{ fontWeight: 600, marginBottom: 4 }}>AI category suggestion</p>
+            <p style={{ color: "var(--text-muted)", marginBottom: 10 }}>
+              {aiSuggestion.category} ({Math.round(aiSuggestion.confidence * 100)}% confidence). You remain in control of the final category.
+            </p>
+            <button type="button" className="btn-outline" onClick={() => {
+              const suggested = categories.find((category) => category.name === aiSuggestion.category);
+              if (suggested) setForm((current) => ({ ...current, category_id: String(suggested.id) }));
+            }}>Use {aiSuggestion.category}</button>
+          </div>
+        )}
+
         <div>
           <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Screenshot (optional OCR)</label>
           <input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             onChange={async (e) => {
               const f = e.target.files[0];
               if (!f) return;
@@ -103,7 +130,7 @@ export default function TicketCreate() {
               try {
                 const r = await api.ocrExtract(f);
                 if (r.text) setForm((prev) => ({ ...prev, description: prev.description ? prev.description + "\n[OCR]\n" + r.text : r.text }));
-                setOcrMsg(r.text ? "Text extracted and appended." : "No text found in image.");
+                setOcrMsg(r.text ? `${r.characters} characters extracted and appended.` : "No readable text found in image.");
               } catch (err) { setOcrMsg("OCR failed: " + String(err.message).slice(0, 120)); }
             }}
           />
@@ -116,7 +143,7 @@ export default function TicketCreate() {
             <option>LOW</option>
             <option>MEDIUM</option>
             <option>HIGH</option>
-            <option>URGENT</option>
+            <option>CRITICAL</option>
           </select>
         </div>
 

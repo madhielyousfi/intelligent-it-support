@@ -3,8 +3,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models import Ticket, User
-from app.services import require_roles
+from app.models import Customer, Ticket, User
+from app.services import get_current_user
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -14,15 +14,18 @@ OPEN_STATUSES = ("NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER")
 @router.get("/stats")
 def stats(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles("admin", "manager")),
+    user: User = Depends(get_current_user),
 ):
-    counts = dict(
-        db.query(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status).all()
-    )
+    query = db.query(Ticket)
+    if user.role == "technician":
+        query = query.filter(Ticket.technician_id == user.id)
+    elif user.role == "customer":
+        query = query.join(Customer).filter(Customer.user_id == user.id)
+    counts = dict(query.with_entities(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status).all())
     total = sum(counts.values())
     open_count = sum(counts.get(s, 0) for s in OPEN_STATUSES)
     recent = (
-        db.query(Ticket).order_by(Ticket.id.desc()).limit(10).all()
+        query.order_by(Ticket.id.desc()).limit(10).all()
     )
     return {
         "total": total,

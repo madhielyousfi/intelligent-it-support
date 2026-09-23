@@ -8,6 +8,7 @@ Artifacts: ai/ticket_classifier.pkl, ai/labels.json
 Retrain anytime:  python ai/train.py   (then restart the API)
 """
 
+import os
 from pathlib import Path
 
 import joblib
@@ -16,7 +17,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
 AI_DIR = Path(__file__).resolve().parent
-MODEL_PATH = AI_DIR / "ticket_classifier.pkl"
+MODEL_PATH = Path(os.environ.get("AI_MODEL_PATH", AI_DIR / "ticket_classifier.pkl"))
 
 BOOTSTRAP = [
     # Network
@@ -27,7 +28,6 @@ BOOTSTRAP = [
     ("Video calls freezing", "Teams calls freeze, likely bandwidth or latency", "Network"),
     # Hardware
     ("Laptop won't power on", "No lights, charger connected, still dead", "Hardware"),
-    ("Printer offline", "Printer shows offline, jobs stuck in queue", "Hardware"),
     ("Keyboard keys stuck", "Several keys repeat or don't register", "Hardware"),
     ("Monitor flickering", "External display flickers over HDMI", "Hardware"),
     ("Battery drains fast", "Battery lasts 40 minutes after full charge", "Hardware"),
@@ -37,18 +37,36 @@ BOOTSTRAP = [
     ("Spreadsheet formula error", "Formulas recalc wrong after macro run", "Software"),
     ("Browser tab hangs", "Web app tab freezes with large reports", "Software"),
     ("Install new version", "Need the latest release of the design tool", "Software"),
-    # Access
-    ("Password reset please", "Locked out after too many attempts", "Access"),
-    ("Need access to shared folder", "Request read access to finance share", "Access"),
-    ("New joiner account", "Create AD account and mailbox for new hire", "Access"),
-    ("VPN token expired", "MFA token expired, cannot approve logins", "Access"),
-    ("Admin rights for install", "Need temporary elevation to install printer driver", "Access"),
+    # Account
+    ("Password reset please", "Locked out after too many attempts", "Account"),
+    ("Need access to shared folder", "Request read access to finance share", "Account"),
+    ("New joiner account", "Create AD account and mailbox for new hire", "Account"),
+    ("VPN token expired", "MFA token expired, cannot approve logins", "Account"),
+    ("Admin rights for install", "Need temporary elevation to install printer driver", "Account"),
     # Email
     ("Cannot send email", "Outgoing mail bounces with error 550", "Email"),
     ("Mailbox full warning", "Quota exceeded, cannot receive new mail", "Email"),
     ("Missing emails from client", "Expected messages never arrived, no spam trace", "Email"),
     ("Shared mailbox permission", "Cannot open support inbox after role change", "Email"),
     ("Email signature wrong", "New branding signature not applying in client", "Email"),
+    # Security
+    ("Suspicious login alert", "Received an unknown sign-in notification", "Security"),
+    ("Possible phishing message", "Email asks for credentials through a strange link", "Security"),
+    ("Malware warning", "Antivirus detected a potentially unwanted program", "Security"),
+    ("Lost company phone", "My work phone is missing and needs to be locked", "Security"),
+    ("MFA device replacement", "Need to replace the registered authenticator device", "Security"),
+    # Printer
+    ("Printer offline", "Printer shows offline, jobs stuck in queue", "Printer"),
+    ("Print job stuck", "Document has been waiting in the print queue for an hour", "Printer"),
+    ("Toner replacement", "Printer reports low toner and prints faded pages", "Printer"),
+    ("Cannot scan document", "Multifunction printer scan button returns an error", "Printer"),
+    ("Wrong printer selected", "Need help adding the office printer on my laptop", "Printer"),
+    # Other
+    ("General IT question", "I need help deciding which company tool to use", "Other"),
+    ("Desk move request", "Moving desks next week and need IT guidance", "Other"),
+    ("Equipment request", "What is the process for requesting a laptop bag", "Other"),
+    ("Training request", "Please explain how to use the internal portal", "Other"),
+    ("Unclear issue", "Something seems unusual but I cannot describe it", "Other"),
 ]
 
 
@@ -85,6 +103,7 @@ def main() -> None:
          ("lr", LogisticRegression(max_iter=1000))]
     )
     clf.fit(X, y)
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(clf, MODEL_PATH)
     print(f"Trained on {len(samples)} samples ({len(samples)-len(BOOTSTRAP)} from DB) -> {MODEL_PATH}")
     print("Classes:", sorted(set(y)))

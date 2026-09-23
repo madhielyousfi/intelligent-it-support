@@ -21,17 +21,23 @@ MODEL_PATH = (
 MIN_CONFIDENCE = 0.25
 
 
-@lru_cache(maxsize=1)
-def _load():
-    if not MODEL_PATH.exists():
-        return None
+@lru_cache(maxsize=2)
+def _load(model_path: str, modified_at_ns: int):
     import joblib
 
-    return joblib.load(MODEL_PATH)
+    return joblib.load(model_path)
+
+
+def _model():
+    """Load the current model; a newly trained file is picked up without restart."""
+    try:
+        return _load(str(MODEL_PATH), MODEL_PATH.stat().st_mtime_ns)
+    except (FileNotFoundError, OSError, ValueError):
+        return None
 
 
 def predict(title: str, description: str) -> tuple[str | None, float | None]:
-    model = _load()
+    model = _model()
     if model is None:
         return None, None
     try:

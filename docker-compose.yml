@@ -24,10 +24,14 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://itsm:itsm_dev_password@postgres:5432/itsm_db
       SECRET_KEY: change-me-in-production-use-long-random-string
+      AI_MODEL_PATH: /app/ai/models/ticket_classifier.pkl
     depends_on:
       - postgres
     ports:
       - "8000:8000"
+    volumes:
+      - itsm-ai-models:/app/ai/models
+      - ./data:/app/data
 
   frontend:
     build:
@@ -40,3 +44,4 @@ services:
 
 volumes:
   itsm-pgdata:
+  itsm-ai-models:

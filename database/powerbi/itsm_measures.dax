@@ -1,0 +1,34 @@
+/* Create these measures on the FactTickets table in Power BI. */
+
+Total Tickets = COUNTROWS(FactTickets)
+
+Open Tickets =
+CALCULATE(
+    [Total Tickets],
+    FactTickets[status] IN { "NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER" }
+)
+
+Resolved Tickets =
+CALCULATE([Total Tickets], FactTickets[status] = "RESOLVED")
+
+Closed Tickets =
+CALCULATE([Total Tickets], FactTickets[status] = "CLOSED")
+
+Critical Tickets =
+CALCULATE(
+    [Total Tickets],
+    FactTickets[priority] = "CRITICAL",
+    FactTickets[status] <> "CLOSED"
+)
+
+Average Resolution Hours =
+AVERAGE(FactTickets[hours_to_resolve])
+
+AI Suggested Tickets =
+CALCULATE([Total Tickets], NOT ISBLANK(FactTickets[ai_category]))
+
+AI Agreement Rate =
+DIVIDE(
+    CALCULATE([Total Tickets], FactTickets[ai_category] = FactTickets[category]),
+    [AI Suggested Tickets]
+)

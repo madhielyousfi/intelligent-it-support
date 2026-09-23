@@ -1,10 +1,13 @@
 import { NavLink, useNavigate } from "react-router-dom";
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", roles: ["admin", "manager"] },
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/admin", label: "Administration", roles: ["admin"] },
+  { to: "/manager", label: "Manager workspace", roles: ["manager"] },
   { to: "/customers", label: "Customers", roles: ["admin", "manager"] },
   { to: "/tickets", label: "Tickets" },
-  { to: "/tickets/new", label: "New ticket" },
+  { to: "/knowledge-base", label: "Knowledge base" },
+  { to: "/tickets/new", label: "New ticket", roles: ["admin", "manager", "customer"] },
 ];
 
 export default function Layout({ children }) {

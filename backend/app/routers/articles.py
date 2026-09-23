@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models import Article, Category, User
-from app.schemas import ArticleCreate, ArticleOut
+from app.schemas import ArticleCreate, ArticleOut, ArticleUpdate
 from app.services import get_current_user, require_roles
 
 router = APIRouter(prefix="/articles", tags=["knowledge-base"])
@@ -42,3 +42,36 @@ def get_article(article_id: int, db: Session = Depends(get_db), _: User = Depend
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
     return article
+
+
+@router.patch("/{article_id}", response_model=ArticleOut)
+def update_article(
+    article_id: int,
+    payload: ArticleUpdate,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles("admin", "manager")),
+):
+    article = db.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    values = payload.model_dump(exclude_unset=True)
+    if "category_id" in values and values["category_id"] is not None and not db.get(Category, values["category_id"]):
+        raise HTTPException(status_code=400, detail="category_id does not exist")
+    for field, value in values.items():
+        setattr(article, field, value)
+    db.commit()
+    db.refresh(article)
+    return article
+
+
+@router.delete("/{article_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_article(
+    article_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles("admin", "manager")),
+):
+    article = db.get(Article, article_id)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    db.delete(article)
+    db.commit()

@@ -10,8 +10,11 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY ai/ ./ai/
+COPY etl/ ./etl/
+COPY database/ ./database/
+COPY data/ ./data/
 WORKDIR /app/backend
 
-ENV AI_MODEL_PATH=/app/ai/ticket_classifier.pkl
+ENV AI_MODEL_PATH=/app/ai/models/ticket_classifier.pkl
 EXPOSE 8000
-CMD ["sh", "-c", "for i in $(seq 1 30); do python -c \"from sqlalchemy import create_engine; import os; create_engine(os.environ['DATABASE_URL']).connect().close()\" && break || sleep 2; done; python -m app.init_db && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "for i in $(seq 1 30); do python -c \"from sqlalchemy import create_engine; import os; create_engine(os.environ['DATABASE_URL']).connect().close()\" && break || sleep 2; done; alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

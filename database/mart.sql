@@ -11,7 +11,7 @@ SELECT
     t.ai_confidence,
     c.name          AS customer,
     c.company       AS company,
-    d.hostname      AS device,
+    CONCAT_WS(' ', d.manufacturer, d.model) AS device,
     cat.name        AS category,
     u.full_name     AS technician,
     t.created_at,
@@ -40,3 +40,12 @@ SELECT COALESCE(cat.name, '(none)') AS category,
 FROM tickets t LEFT JOIN categories cat ON cat.id = t.category_id
 WHERE t.resolved_at IS NOT NULL
 GROUP BY cat.name;
+
+CREATE OR REPLACE VIEW v_tickets_by_priority AS
+SELECT priority, COUNT(*) AS n FROM tickets GROUP BY priority;
+
+CREATE OR REPLACE VIEW v_ticket_daily_volume AS
+SELECT DATE(created_at) AS day, COUNT(*) AS n
+FROM tickets
+GROUP BY DATE(created_at)
+ORDER BY day;
