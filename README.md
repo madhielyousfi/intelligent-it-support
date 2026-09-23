@@ -114,6 +114,10 @@ and it is not a deployment environment.
 Docker starts PostgreSQL, applies the Alembic migration, seeds development data,
 and starts the API and frontend:
 
+**Windows and Linux:** follow the complete
+[platform run guide](docs/RUNNING_ON_WINDOWS_AND_LINUX.md). Docker Compose is
+the recommended setup for both platforms.
+
 ```bash
 docker compose build
 docker compose up
