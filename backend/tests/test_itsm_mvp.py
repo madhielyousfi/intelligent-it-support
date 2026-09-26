@@ -131,14 +131,14 @@ def test_ticket_filters_assignment_history_and_workflow(client):
     assert test_client.get(f"/tickets?technician_id={ids['tech']}", headers=admin).json()[0]["id"] == ticket["id"]
     assert test_client.get(f"/tickets?technician_id={ids['tech']}", headers=token(test_client, "tech@test.local", "tech123")).status_code == 403
     tech = token(test_client, "tech@test.local", "tech123")
-    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "CLOSED"}).status_code == 400
-    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "IN_PROGRESS"}).status_code == 200
-    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "WAITING_CUSTOMER"}).status_code == 200
-    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "IN_PROGRESS"}).status_code == 200
-    resolved = test_client.patch(f"/tickets/{ticket['id']}/resolve", headers=tech, json={"resolution": "Reinstalled Wi-Fi driver"})
+    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "CLOSED"}).status_code == 403
+    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=admin, json={"status": "IN_PROGRESS"}).status_code == 200
+    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=admin, json={"status": "WAITING_CUSTOMER"}).status_code == 200
+    assert test_client.patch(f"/tickets/{ticket['id']}/status", headers=admin, json={"status": "IN_PROGRESS"}).status_code == 200
+    resolved = test_client.patch(f"/tickets/{ticket['id']}/resolve", headers=admin, json={"resolution": "Reinstalled Wi-Fi driver"})
     assert resolved.status_code == 200
     assert resolved.json()["resolved_at"] is not None
-    closed = test_client.patch(f"/tickets/{ticket['id']}/status", headers=tech, json={"status": "CLOSED"})
+    closed = test_client.patch(f"/tickets/{ticket['id']}/status", headers=admin, json={"status": "CLOSED"})
     assert closed.status_code == 200
     assert closed.json()["closed_at"] is not None
     assert [event["action"] for event in closed.json()["history"]] == ["CREATED", "ASSIGNED", "STATUS_CHANGED", "STATUS_CHANGED", "STATUS_CHANGED", "RESOLVED", "CLOSED"]
@@ -166,9 +166,9 @@ def test_resolutions_are_reusable_solutions_and_articles_are_managed(client):
     source = create_ticket(test_client, ids)
     assert test_client.patch(f"/tickets/{source['id']}/assign", headers=admin, json={"technician_id": ids["tech"]}).status_code == 200
     tech = token(test_client, "tech@test.local", "tech123")
-    assert test_client.patch(f"/tickets/{source['id']}/status", headers=tech, json={"status": "IN_PROGRESS"}).status_code == 200
+    assert test_client.patch(f"/tickets/{source['id']}/status", headers=admin, json={"status": "IN_PROGRESS"}).status_code == 200
     resolution = "Reinstalled the wireless network driver."
-    assert test_client.patch(f"/tickets/{source['id']}/resolve", headers=tech, json={"resolution": resolution}).status_code == 200
+    assert test_client.patch(f"/tickets/{source['id']}/resolve", headers=admin, json={"resolution": resolution}).status_code == 200
     target = create_ticket(test_client, ids)
     suggestions = test_client.get(f"/tickets/{target['id']}/suggestions", headers=admin)
     assert suggestions.status_code == 200
@@ -210,3 +210,76 @@ def test_dashboard_is_live_and_scoped(client):
     assert after["total"] == before + 1
     assert test_client.get("/dashboard/stats", headers=token(test_client, "customer@test.local", "customer123")).json()["total"] == 1
     assert ticket["status"] == "NEW"
+
+
+def test_admin_status_roundtrip_filters_timestamps_and_history(client):
+    test_client, ids = client
+    admin = token(test_client, "admin@test.local", "admin123")
+    ticket = create_ticket(test_client, ids)
+    path = f"/tickets/{ticket['id']}"
+    for status in ("IN_PROGRESS", "RESOLVED", "CLOSED", "OPEN", "CLOSED", "IN_PROGRESS", "OPEN"):
+        response = test_client.patch(path + "/status", headers=admin, json={"status": status})
+        assert response.status_code == 200, response.text
+        updated = response.json()
+        stored_status = "NEW" if status == "OPEN" else status
+        assert updated["status"] == stored_status
+        assert test_client.get(path, headers=admin).json()["status"] == stored_status
+        filtered = test_client.get(f"/tickets?status={status}", headers=admin)
+        assert filtered.headers["X-Total-Count"] == "1"
+        assert filtered.json()[0]["id"] == ticket["id"]
+        assert (updated["closed_at"] is not None) == (status == "CLOSED")
+        if status == "RESOLVED":
+            assert updated["resolved_at"] is not None
+        elif status != "CLOSED":
+            assert updated["resolved_at"] is None
+        assert updated["history"][-1]["new_value"] == stored_status
+        assert updated["history"][-1]["user_id"] == ids["admin"]
+    before = test_client.get(path, headers=admin).json()
+    unchanged = test_client.patch(path + "/status", headers=admin, json={"status": "OPEN"}).json()
+    assert len(unchanged["history"]) == len(before["history"])
+    assert test_client.patch(path + "/status", headers=admin, json={"status": "INVALID"}).status_code == 422
+    assert test_client.patch("/tickets/99999/status", headers=admin, json={"status": "OPEN"}).status_code == 404
+    assert test_client.get("/tickets?status=INVALID", headers=admin).status_code == 422
+
+
+@pytest.mark.parametrize("email,password", [
+    ("manager@test.local", "manager123"),
+    ("tech@test.local", "tech123"),
+    ("customer@test.local", "customer123"),
+])
+def test_non_admin_cannot_change_status_through_any_workflow_endpoint(client, email, password):
+    test_client, ids = client
+    ticket = create_ticket(test_client, ids)
+    admin = token(test_client, "admin@test.local", "admin123")
+    path = f"/tickets/{ticket['id']}"
+    test_client.patch(path + "/assign", headers=admin, json={"technician_id": ids["tech"]})
+    user = token(test_client, email, password)
+    before = test_client.get(path, headers=admin).json()
+    for status in ("OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "WAITING_CUSTOMER"):
+        assert test_client.patch(path + "/status", headers=user, json={"status": status}).status_code == 403
+    assert test_client.patch(path + "/resolve", headers=user, json={"resolution": "Unauthorized"}).status_code == 403
+    after = test_client.get(path, headers=admin).json()
+    assert after == before
+    assert test_client.patch(path + "/status", json={"status": "OPEN"}).status_code == 401
+
+
+def test_open_filter_includes_legacy_states_and_all_customers(client):
+    test_client, ids = client
+    admin = token(test_client, "admin@test.local", "admin123")
+    expected = []
+    for status in ("NEW", "ASSIGNED", "WAITING_CUSTOMER", "RESOLVED"):
+        ticket = create_ticket(test_client, ids)
+        test_client.patch(f"/tickets/{ticket['id']}/status", headers=admin, json={"status": status})
+        if status != "RESOLVED":
+            expected.append(ticket["id"])
+    payload = {**ticket_payload(ids), "customer_id": ids["other_customer"], "device_id": ids["other_device"]}
+    foreign = test_client.post("/tickets", headers=admin, json=payload).json()
+    expected.append(foreign["id"])
+    response = test_client.get("/tickets?status=OPEN", headers=admin)
+    assert {ticket["id"] for ticket in response.json()} == set(expected)
+    assert response.headers["X-Total-Count"] == "4"
+    manager = token(test_client, "manager@test.local", "manager123")
+    fresh = create_ticket(test_client, ids)
+    assignment = test_client.patch(f"/tickets/{fresh['id']}/assign", headers=manager, json={"technician_id": ids["tech"]})
+    assert assignment.status_code == 200
+    assert assignment.json()["status"] == "NEW"

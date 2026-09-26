@@ -49,11 +49,12 @@ def main() -> None:
         tech_headers = login(client, technician["email"], "secret123")
         assigned = request(client, "GET", "/tickets?status=ASSIGNED&priority=HIGH", 200, headers=tech_headers)
         assert len(assigned) == 1 and assigned[0]["id"] == ticket["id"]
-        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=tech_headers, json={"status": "IN_PROGRESS"})
-        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=tech_headers, json={"status": "WAITING_CUSTOMER"})
-        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=tech_headers, json={"status": "IN_PROGRESS"})
-        request(client, "PATCH", f"/tickets/{ticket['id']}/resolve", 200, headers=tech_headers, json={"resolution": "Reinstalled Wi-Fi driver"})
-        closed = request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=tech_headers, json={"status": "CLOSED"})
+        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 403, headers=tech_headers, json={"status": "IN_PROGRESS"})
+        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=admin, json={"status": "IN_PROGRESS"})
+        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=admin, json={"status": "WAITING_CUSTOMER"})
+        request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=admin, json={"status": "IN_PROGRESS"})
+        request(client, "PATCH", f"/tickets/{ticket['id']}/resolve", 200, headers=admin, json={"resolution": "Reinstalled Wi-Fi driver"})
+        closed = request(client, "PATCH", f"/tickets/{ticket['id']}/status", 200, headers=admin, json={"status": "CLOSED"})
         assert closed["status"] == "CLOSED" and closed["resolved_at"] and closed["closed_at"]
         assert [entry["action"] for entry in closed["history"]] == ["CREATED", "ASSIGNED", "STATUS_CHANGED", "STATUS_CHANGED", "STATUS_CHANGED", "RESOLVED", "CLOSED"]
         assert request(client, "GET", "/dashboard/stats", 200, headers=admin)["total"] == dashboard_total_before + 1

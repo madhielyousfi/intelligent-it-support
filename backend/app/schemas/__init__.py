@@ -210,7 +210,7 @@ class AssignIn(BaseModel):
 
 
 class StatusIn(BaseModel):
-    status: Literal["NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"]
+    status: Literal["OPEN", "NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"]
 
 
 class ResolveIn(BaseModel):

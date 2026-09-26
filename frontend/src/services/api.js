@@ -16,7 +16,12 @@ async function handle(res) {
   }
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    let message = text;
+    try {
+      const body = JSON.parse(text);
+      message = typeof body.detail === "string" ? body.detail : body.detail?.map((issue) => issue.msg).join("; ") || text;
+    } catch {}
+    throw new Error(message || `Request failed: ${res.status}`);
   }
   return res.json();
 }

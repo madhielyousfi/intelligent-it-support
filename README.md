@@ -40,7 +40,7 @@ available.
 | Role | Access |
 | --- | --- |
 | Customer | Own profile/devices/tickets; may create tickets only for its linked customer record |
-| Technician | Only assigned tickets and their related customers/devices; may progress and resolve them |
+| Technician | Read assigned tickets and their related customers/devices |
 | Manager | All tickets/customers/devices/categories, assignment, and global dashboard |
 | Admin | Full management of users, customers, devices, categories, tickets, and dashboard |
 
@@ -48,13 +48,23 @@ The backend, not the frontend, enforces these rules.
 
 ## Ticket workflow
 
-```text
-NEW → ASSIGNED → IN_PROGRESS → WAITING_CUSTOMER → IN_PROGRESS → RESOLVED → CLOSED
-```
+Administrators can use the status dropdown on each ticket row or detail page to
+move between **Open**, **In Progress**, **Resolved**, and **Closed**, including
+reopening tickets. Updates save through `PATCH /tickets/{id}/status` and refresh
+React state without a page reload. Status filters include all customers' tickets
+for admins; existing visibility rules continue to apply to other roles.
 
-`IN_PROGRESS → RESOLVED` and `WAITING_CUSTOMER → RESOLVED` are also valid.
-Invalid transitions are rejected by the API. Every ticket action creates a
-`ticket_history` record.
+For compatibility, Open maps to the existing `NEW` database state. The Open
+filter also includes legacy `ASSIGNED` and `WAITING_CUSTOMER` tickets. Existing
+status values remain accepted by the API; unknown values are rejected. Status
+changes record the administrator and old/new values in `ticket_history`, and
+reopening clears lifecycle timestamps. Repeating the current status is a no-op.
+
+Only admins can change status or resolve tickets, including via direct API calls.
+Managers can still assign technicians, but manager assignment leaves status
+unchanged. Admin assignment retains the existing `NEW` to `ASSIGNED` behavior.
+The resolution form still stores reusable solutions when a resolution note is
+supplied; the status dropdown can mark a ticket resolved without a note.
 
 ## Configuration
 
@@ -232,7 +242,7 @@ pytest -q
 
 The suite covers authentication, user/customer/device/category management,
 ticket validation and filtering, authorization boundaries, assignment history,
-workflow state transitions, resolution/closure timestamps, and live dashboard
+admin status changes and reopening, resolution/closure timestamps, and live dashboard
 counts.
 
 For a running API connected to PostgreSQL, execute the HTTP acceptance flow:
@@ -242,13 +252,27 @@ cd backend
 ITSM_BASE_URL=http://127.0.0.1:8000 python tests/e2e_http.py
 ```
 
+The React DOM integration test uses the live seeded development API and
+PostgreSQL. It creates a clearly named test ticket and leaves it closed for
+inspection. No connected browser is needed; visual layout is not checked.
+
+```bash
+cd frontend
+npm install
+npm run test:admin-tickets
+```
+
+Set `ITSM_BASE_URL` to use another development API. The test covers list/detail
+dropdowns, persistence, Open/Resolved filters, error recovery, notifications, and
+hidden controls for managers, technicians, and customers.
+
 ## Milestone 1 acceptance flow
 
 1. Sign in as Admin and create a technician, customer, and device.
 2. Create a category-linked ticket. It starts as `NEW`.
 3. Assign the technician (`ASSIGNED`).
 4. Sign in as that technician and verify only assigned tickets are listed.
-5. Move the ticket through `IN_PROGRESS`, `WAITING_CUSTOMER`, `IN_PROGRESS`,
+5. Sign back in as Admin and move the ticket through `IN_PROGRESS`, `WAITING_CUSTOMER`, `IN_PROGRESS`,
    `RESOLVED`, and `CLOSED`.
 6. Verify ticket history and dashboard metrics reflect every action.
 

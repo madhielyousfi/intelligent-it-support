@@ -2,23 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../services/api.js";
 
-const NEXT = {
-  NEW: [],
-  ASSIGNED: ["IN_PROGRESS"],
-  IN_PROGRESS: ["WAITING_CUSTOMER", "RESOLVED"],
-  WAITING_CUSTOMER: ["IN_PROGRESS", "RESOLVED"],
-  RESOLVED: ["CLOSED"],
-  CLOSED: [],
-};
-
-const STATUS_LABELS = {
-  NEW: "New",
-  ASSIGNED: "Assigned",
-  IN_PROGRESS: "In progress",
-  WAITING_CUSTOMER: "Waiting",
-  RESOLVED: "Resolved",
-  CLOSED: "Closed",
-};
+import TicketStatusSelect, { STATUS_LABELS, ticketStatus } from "../components/TicketStatusSelect.jsx";
 
 export default function TicketDetail() {
   const { id } = useParams();
@@ -27,6 +11,8 @@ export default function TicketDetail() {
   const [techId, setTechId] = useState("");
   const [resolution, setResolution] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
   const [me, setMe] = useState(null);
   const [sugg, setSugg] = useState(null);
 
@@ -43,19 +29,20 @@ export default function TicketDetail() {
 
   const run = async (fn) => {
     setError("");
-    try { setTicket(await fn()); }
+    setSuccess("");
+    setSaving(true);
+    try { setTicket(await fn()); setSuccess("Ticket updated successfully."); }
     catch (e) { setError(String(e.message).slice(0, 300)); }
+    finally { setSaving(false); }
   };
 
   const canAssign = me && (me.role === "admin" || me.role === "manager");
-  const canWork = me && (me.role === "admin" || me.role === "manager" || (me.role === "technician" && ticket.technician_id === me.id));
+  const canWork = me?.role === "admin";
 
   if (error && !ticket) return <p className="error-msg">{error}</p>;
   if (!ticket) return <p style={{ color: "var(--text-muted)" }}>Loading…</p>;
 
-  const next = NEXT[ticket.status] || [];
-  const showResolve = next.includes("RESOLVED");
-  const statusButtons = next.filter((s) => s !== "RESOLVED");
+  const showResolve = ["IN_PROGRESS", "WAITING_CUSTOMER"].includes(ticket.status);
 
   return (
     <div className="fade-in">
@@ -69,13 +56,14 @@ export default function TicketDetail() {
         <div>
           <h3 style={{ marginBottom: 8 }}>{ticket.title}</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span className="badge badge-ink">{STATUS_LABELS[ticket.status] || ticket.status}</span>
+            <span className="badge badge-ink">{STATUS_LABELS[ticketStatus(ticket.status)]}</span>
             <span className="badge badge-soft">{ticket.priority}</span>
           </div>
         </div>
       </div>
 
-      {error && <p className="error-msg" style={{ marginBottom: 16 }}>{error}</p>}
+      {success && <p role="status" style={{ marginBottom: 16, color: "#237347" }}>{success}</p>}
+      {error && <p role="alert" className="error-msg" style={{ marginBottom: 16 }}>{error}</p>}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
         <div className="card">
@@ -126,27 +114,23 @@ export default function TicketDetail() {
               <option value="">Select technician</option>
               {technicians.map((t) => <option key={t.id} value={t.id}>{t.full_name} ({t.email})</option>)}
             </select>
-            <button disabled={!techId} className="btn-primary" onClick={() => run(() => api.assignTicket(ticket.id, Number(techId)))}>Assign</button>
+            <button disabled={!techId || saving} className="btn-primary" onClick={() => run(() => api.assignTicket(ticket.id, Number(techId)))}>Assign</button>
           </div>
         </div>
       )}
 
-      {canWork && statusButtons.length > 0 && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-          {statusButtons.map((s) => (
-            <button key={s} className="btn-outline" onClick={() => run(() => api.changeStatus(ticket.id, s))}>
-              {STATUS_LABELS[s] || s}
-            </button>
-          ))}
-        </div>
-      )}
+      {canWork && <div className="card" style={{ marginBottom: 24 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 12 }}>Status
+          <TicketStatusSelect ticket={ticket} disabled={saving} onChange={(value) => run(() => api.changeStatus(ticket.id, value))} />
+        </label>
+      </div>}
 
       {canWork && showResolve && (
         <div className="card" style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 12 }}>Resolve ticket</p>
           <form onSubmit={(e) => { e.preventDefault(); run(() => api.resolveTicket(ticket.id, resolution)); }} style={{ display: "flex", gap: 12 }}>
             <input placeholder="Describe the resolution…" value={resolution} onChange={(e) => setResolution(e.target.value)} required style={{ flex: 1 }} />
-            <button type="submit" className="btn-primary">Resolve</button>
+            <button type="submit" disabled={saving} className="btn-primary">Resolve</button>
           </form>
         </div>
       )}

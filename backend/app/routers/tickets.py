@@ -13,12 +13,7 @@ from app.services.classifier import predict
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
-STATUS_VIA_STATUS = {
-    "ASSIGNED": {"IN_PROGRESS"},
-    "IN_PROGRESS": {"WAITING_CUSTOMER"},
-    "WAITING_CUSTOMER": {"IN_PROGRESS"},
-    "RESOLVED": {"CLOSED"},
-}
+OPEN_STATUSES = ("NEW", "ASSIGNED", "WAITING_CUSTOMER")
 
 
 def ticket_is_accessible(ticket: Ticket, user: User) -> bool:
@@ -97,7 +92,7 @@ def create_ticket(payload: TicketCreate, db: Session = Depends(get_db), user: Us
 
 @router.get("", response_model=list[TicketOut])
 def list_tickets(
-    status: Literal["NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"] | None = None,
+    status: Literal["OPEN", "NEW", "ASSIGNED", "IN_PROGRESS", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"] | None = None,
     priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] | None = None,
     customer_id: int | None = None,
     technician_id: int | None = None,
@@ -116,7 +111,7 @@ def list_tickets(
     elif user.role == "technician":
         q = q.filter(Ticket.technician_id == user.id)
     if status is not None:
-        q = q.filter(Ticket.status == status)
+        q = q.filter(Ticket.status.in_(OPEN_STATUSES)) if status == "OPEN" else q.filter(Ticket.status == status)
     if priority is not None:
         q = q.filter(Ticket.priority == priority)
     if customer_id is not None:
@@ -159,7 +154,7 @@ def assign_ticket(ticket_id: int, payload: AssignIn, db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="technician_id must be an active technician user")
     old_technician = ticket.technician.full_name if ticket.technician else "Unassigned"
     ticket.technician_id = tech.id
-    if ticket.status == "NEW":
+    if ticket.status == "NEW" and user.role == "admin":
         ticket.status = "ASSIGNED"
     _record(db, ticket, user.id, "ASSIGNED", old_technician, tech.full_name, f"Assigned by {user.full_name}")
     db.commit()
@@ -167,27 +162,27 @@ def assign_ticket(ticket_id: int, payload: AssignIn, db: Session = Depends(get_d
 
 
 @router.patch("/{ticket_id}/status", response_model=TicketDetail)
-def change_status(ticket_id: int, payload: StatusIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def change_status(ticket_id: int, payload: StatusIn, db: Session = Depends(get_db), user: User = Depends(require_roles("admin"))):
     ticket = _detail(ticket_id, db, user)
-    if user.role not in ("technician", "admin", "manager"):
-        raise HTTPException(status_code=403, detail="You are not authorized to change ticket status")
-    new_status = payload.status
-    if new_status not in STATUS_VIA_STATUS.get(ticket.status, set()):
-        raise HTTPException(status_code=400, detail=f"Invalid transition {ticket.status} -> {new_status}")
+    new_status = "NEW" if payload.status == "OPEN" else payload.status
+    if new_status == ticket.status:
+        return ticket
     old_status = ticket.status
     ticket.status = new_status
-    if new_status == "CLOSED":
-        ticket.closed_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    ticket.closed_at = now if new_status == "CLOSED" else None
+    if new_status == "RESOLVED":
+        ticket.resolved_at = now
+    elif new_status != "CLOSED":
+        ticket.resolved_at = None
     _record(db, ticket, user.id, "CLOSED" if new_status == "CLOSED" else "STATUS_CHANGED", old_status, new_status)
     db.commit()
     return _detail(ticket.id, db, user)
 
 
 @router.patch("/{ticket_id}/resolve", response_model=TicketDetail)
-def resolve_ticket(ticket_id: int, payload: ResolveIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def resolve_ticket(ticket_id: int, payload: ResolveIn, db: Session = Depends(get_db), user: User = Depends(require_roles("admin"))):
     ticket = _detail(ticket_id, db, user)
-    if user.role not in ("technician", "admin", "manager"):
-        raise HTTPException(status_code=403, detail="You are not authorized to resolve tickets")
     if ticket.status not in ("IN_PROGRESS", "WAITING_CUSTOMER"):
         raise HTTPException(status_code=400, detail=f"Can only resolve from IN_PROGRESS or WAITING_CUSTOMER (current: {ticket.status})")
     old_status = ticket.status
