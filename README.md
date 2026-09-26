@@ -106,7 +106,15 @@ Open the UI at `http://localhost:5173`, and Swagger at
 Use the **Open in Google Colab** button above to run a temporary React,
 FastAPI, PostgreSQL, AI-classifier, and OCR demo directly from GitHub. The
 notebook runs Alembic migrations, seeds the current development data, trains
-the classifier, and embeds the full login UI through Colab's port proxy.
+the classifier, builds the frontend, and embeds the login UI through Colab's
+port proxy. Choose **Runtime → Run all**, then sign in inside the app shown
+after Step 5 with `admin@example.com` / `admin123`.
+
+If you have an older notebook or a failed runtime, choose **Runtime → Disconnect
+and delete runtime**, reopen the Colab button from this repository, and run all
+cells again. The notebook prints its GitHub revision and startup logs to make
+errors easier to identify. Keep the notebook session connected while using the
+embedded app; a separate-tab port link is not supported.
 
 Colab is intended for demonstrations and learning only: its data is temporary
 and it is not a deployment environment.

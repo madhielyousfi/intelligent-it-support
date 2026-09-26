@@ -1,21 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const apiPaths = ["health", "auth", "customers", "devices", "tickets", "categories", "users", "dashboard", "articles", "ocr"];
+const proxy = Object.fromEntries(apiPaths.map((path) => [`^/${path}(/|$)`, {
+  target: "http://127.0.0.1:8000",
+  bypass(req) {
+    // A browser page load belongs to React; JSON fetches belong to FastAPI.
+    if (req.method === "GET" && req.headers.accept?.includes("text/html")) return "/index.html";
+  },
+}]));
+
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: {
-      "/health": "http://localhost:8000",
-      "/auth": "http://localhost:8000",
-      "/customers": "http://localhost:8000",
-      "/devices": "http://localhost:8000",
-      "/tickets": "http://localhost:8000",
-      "/categories": "http://localhost:8000",
-      "/users": "http://localhost:8000",
-      "/dashboard": "http://localhost:8000",
-      "/articles": "http://localhost:8000",
-      "/ocr": "http://localhost:8000",
-    },
+    allowedHosts: [process.env.ITSM_COLAB_PROXY_HOST].filter(Boolean),
+    proxy,
+  },
+  preview: {
+    allowedHosts: [process.env.ITSM_COLAB_PROXY_HOST].filter(Boolean),
+    proxy,
   },
 });
