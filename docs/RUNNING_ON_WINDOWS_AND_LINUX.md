@@ -8,21 +8,61 @@ FastAPI and React services together.
 
 ### Prerequisites
 
-- Git
+- Git (optional on Windows when using **Code → Download ZIP**)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) on Windows
   or Docker Engine + the Compose plugin on Linux
-- At least 4 GB of available RAM for Docker
+- Meet the memory, disk, and virtualization requirements in the Docker
+  installation guide for your platform
 
-### Windows — PowerShell
+### Windows — double-click launch (recommended)
+
+1. Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+   and follow its WSL 2 setup instructions. Start it with Linux containers.
+2. On GitHub, click **Code → Download ZIP**, then **Extract All**. Do not run
+   the launcher from inside the ZIP.
+3. Open the project folder containing `docker-compose.yml` and double-click
+   **`run-windows.bat`**.
+4. Wait for the first build. The launcher checks Docker and Compose, starts all
+   services, waits for the API and frontend, then opens <http://localhost:8080>.
+
+You do not need separate Python, Node.js, or PostgreSQL installations. The
+first run downloads images and packages, needs internet access, and may take
+several minutes. Database data is retained in Docker volumes.
+
+To stop, double-click **`stop-windows.bat`**. Closing the launcher window does
+not stop the app. Use the same start shortcut again later.
+
+### Windows — PowerShell alternative
 
 ```powershell
 git clone https://github.com/madhielyousfi/intelligent-it-support.git
 cd intelligent-it-support
-docker compose up --build
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1
 ```
 
-Docker Desktop must be running before the final command. Open
-<http://localhost:8080> after the containers finish starting.
+Optional launcher flags:
+
+```powershell
+# Reuse images after the first successful run
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -NoBuild
+# Start without opening the browser
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -NoBrowser
+# Stop and retain data
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Stop
+```
+
+The `.bat` shortcuts keep their console open so errors remain visible. The
+execution-policy option affects only the launcher process; no permanent policy
+is changed. If your organization blocks scripts, use the direct command below
+or contact its administrator:
+
+```powershell
+docker compose up -d --build
+```
+
+After pulling updates, start normally to rebuild; `-NoBuild` keeps old images.
+For ZIP updates, replace the source files and start normally. Keep the same
+folder name and location to retain the same Compose project and data volumes.
 
 ### Linux — Terminal
 
@@ -144,6 +184,9 @@ terminal and retry activation.
 
 - **Port 8080, 8000, or 5433 is already in use:** stop the process using that
   port, or stop a previous Docker stack with `docker compose down`.
+- **Launcher cannot find Docker:** install Docker Desktop, then reopen the launcher.
+- **Startup times out:** inspect the displayed logs or run `docker compose logs --tail 80 backend frontend`.
+- **Windows containers selected:** switch Docker Desktop to Linux containers.
 - **Docker command cannot connect:** open Docker Desktop on Windows, or start
   the Docker service on Linux.
 - **Frontend starts but API calls fail:** confirm `http://localhost:8000/health`

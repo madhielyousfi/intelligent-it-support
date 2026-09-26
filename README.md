@@ -2,6 +2,8 @@
 
 [![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/madhielyousfi/intelligent-it-support/blob/master/colab/itsm_quickstart.ipynb?forceReload=true)
 
+**Windows users:** [Easy double-click setup](#easy-windows-start).
+
 A FastAPI, React, and PostgreSQL IT Service Management (ITSM) application.
 It includes the completed transactional workflow and Phase 2 support tools:
 AI category suggestions, knowledge-base recommendations, screenshot OCR, ETL
@@ -118,15 +120,34 @@ and starts the API and frontend:
 [platform run guide](docs/RUNNING_ON_WINDOWS_AND_LINUX.md). Docker Compose is
 the recommended setup for both platforms.
 
-### Run on Windows
+### Easy Windows start
 
-Open **PowerShell**, make sure Docker Desktop is running, then run:
+1. Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/),
+   complete its WSL 2 setup, and start Docker Desktop with Linux containers.
+2. On GitHub, click **Code → Download ZIP**, then **Extract All**. Alternatively,
+   clone this repository with Git.
+3. Open the extracted project folder and double-click **`run-windows.bat`**.
+
+The launcher checks Docker, builds and starts all services, waits for the API
+and frontend, and opens <http://localhost:8080> automatically. The first run
+needs internet access and can take several minutes. No separate Python,
+Node.js, or PostgreSQL installation is needed.
+
+Sign in with **`admin@example.com` / `admin123`**. To stop while keeping your
+data, double-click **`stop-windows.bat`**. Closing the launcher window leaves
+the app running.
+
+PowerShell alternative, from the project folder:
 
 ```powershell
-git clone https://github.com/madhielyousfi/intelligent-it-support.git
-cd intelligent-it-support
-docker compose up --build
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1
+# Reuse existing images for faster subsequent starts:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -NoBuild
 ```
+
+The execution-policy option applies only to this PowerShell process; it does
+not change your saved Windows policy. If your organization blocks scripts,
+use `docker compose up -d --build` directly or contact its administrator.
 
 ### Run on Linux
 
