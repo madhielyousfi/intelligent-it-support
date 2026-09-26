@@ -45,7 +45,16 @@ class UserUpdate(BaseModel):
 
 
 # --- Customers ---
+class CustomerDeviceCreate(BaseModel):
+    device_type: str = Field(min_length=1)
+    manufacturer: str = Field(min_length=1)
+    model: str = Field(min_length=1)
+    serial_number: str | None = None
+    operating_system: str | None = None
+
+
 class CustomerCreate(BaseModel):
+    device: CustomerDeviceCreate | None = None
     name: str = Field(min_length=1)
     email: str | None = None
     phone: str | None = None

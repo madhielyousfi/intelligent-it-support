@@ -5,6 +5,9 @@ import { api } from "../services/api.js";
 export default function TicketCreate() {
   const [customers, setCustomers] = useState([]);
   const [devices, setDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [deviceError, setDeviceError] = useState("");
+  const [deviceRetry, setDeviceRetry] = useState(0);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ customer_id: "", device_id: "", category_id: "", title: "", description: "", priority: "MEDIUM" });
   const [error, setError] = useState("");
@@ -19,9 +22,18 @@ export default function TicketCreate() {
   }, []);
 
   useEffect(() => {
-    if (form.customer_id) api.listDevices(form.customer_id).then(setDevices).catch(() => {});
-    else setDevices([]);
-  }, [form.customer_id]);
+    let active = true;
+    setDevices([]);
+    setDeviceError("");
+    setDevicesLoading(Boolean(form.customer_id));
+    if (form.customer_id) {
+      api.listDevices(form.customer_id)
+        .then((items) => { if (active) setDevices(items); })
+        .catch((err) => { if (active) setDeviceError(`Could not load devices: ${err.message}`); })
+        .finally(() => { if (active) setDevicesLoading(false); });
+    }
+    return () => { active = false; };
+  }, [form.customer_id, deviceRetry]);
 
   useEffect(() => {
     const title = form.title.trim();
@@ -39,6 +51,10 @@ export default function TicketCreate() {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    if (devicesLoading || deviceError || !devices.some((device) => String(device.id) === form.device_id)) {
+      setError("Select a registered device for this customer before creating the ticket.");
+      return;
+    }
     try {
       const body = {
         customer_id: Number(form.customer_id),
@@ -72,7 +88,7 @@ export default function TicketCreate() {
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 540 }}>
         <div>
           <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Customer *</label>
-          <select value={form.customer_id} onChange={set("customer_id")} required>
+          <select value={form.customer_id} onChange={(e) => setForm((current) => ({ ...current, customer_id: e.target.value, device_id: "" }))} required>
             <option value="">Select customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -81,8 +97,8 @@ export default function TicketCreate() {
         <div style={{ display: "flex", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Device *</label>
-            <select value={form.device_id} onChange={set("device_id")} required>
-              <option value="">Select device</option>
+            <select value={form.device_id} onChange={set("device_id")} required disabled={!form.customer_id || devicesLoading || !!deviceError || devices.length === 0}>
+              <option value="">{!form.customer_id ? "Select a customer first" : devicesLoading ? "Loading devices…" : devices.length === 0 ? "No devices available" : "Select device"}</option>
               {devices.map((d) => <option key={d.id} value={d.id}>{d.manufacturer} {d.model}</option>)}
             </select>
           </div>
@@ -94,6 +110,13 @@ export default function TicketCreate() {
             </select>
           </div>
         </div>
+
+        {deviceError && <div role="alert" className="error-msg">{deviceError} <button type="button" className="btn-outline" onClick={() => setDeviceRetry((value) => value + 1)}>Retry</button></div>}
+        {form.customer_id && !devicesLoading && !deviceError && devices.length === 0 && (
+          <p role="status" style={{ color: "var(--text-muted)" }}>
+            This customer has no registered devices. An administrator must register a device before you can create a ticket. <Link to={`/customers/${form.customer_id}`}>Open customer devices</Link>
+          </p>
+        )}
 
         <div>
           <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", marginBottom: 6, display: "block" }}>Title *</label>
@@ -148,7 +171,7 @@ export default function TicketCreate() {
         </div>
 
         <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-          <button type="submit" className="btn-primary" style={{ padding: "12px 32px" }}>Create ticket</button>
+          <button type="submit" disabled={devicesLoading || !!deviceError || !form.device_id} className="btn-primary" style={{ padding: "12px 32px" }}>Create ticket</button>
           <Link to="/tickets" className="btn-outline" style={{ padding: "12px 24px", textDecoration: "none" }}>Cancel</Link>
         </div>
       </form>

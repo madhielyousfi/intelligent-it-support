@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api.js";
+import "./Customers.css";
+
+const EMPTY_DEVICE = { device_type: "Laptop", manufacturer: "", model: "", serial_number: "", operating_system: "" };
 
 export default function Customers() {
+  const [device, setDevice] = useState(EMPTY_DEVICE);
+  const [saving, setSaving] = useState(false);
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "" });
+  const [createdCustomer, setCreatedCustomer] = useState(null);
   const [error, setError] = useState("");
   let canManage = false;
   try { canManage = JSON.parse(atob(localStorage.getItem("token").split(".")[1])).role === "admin"; } catch {}
@@ -15,12 +21,18 @@ export default function Customers() {
 
   const create = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError("");
+    setCreatedCustomer(null);
+    setSaving(true);
     try {
-      await api.createCustomer(form);
+      const customer = await api.createCustomer({ ...form, device });
+      setCreatedCustomer({ ...customer, hasDevice: true });
+      setDevice(EMPTY_DEVICE);
       setForm({ name: "", email: "", phone: "", company: "", address: "" });
       load();
     } catch (err) { setError(String(err.message).slice(0, 300)); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -32,15 +44,68 @@ export default function Customers() {
 
       {error && <p className="error-msg" style={{ marginBottom: 16 }}>{error}</p>}
 
-      {canManage && <div className="card" style={{ marginBottom: 32 }}>
-        <h5 style={{ marginBottom: 16 }}>Create customer</h5>
-        <form onSubmit={create} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required style={{ flex: "1 1 180px" }} />
-          <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ flex: "1 1 180px" }} />
-          <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ flex: "1 1 140px" }} />
-          <input placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} style={{ flex: "1 1 180px" }} />
-          <input placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={{ flex: "1 1 220px" }} />
-          <button type="submit" className="btn-primary">Create</button>
+      {createdCustomer && <p role="status" className="customer-created-message">
+        Customer “{createdCustomer.name}” created successfully.
+        <> Device registered. <Link to="/tickets/new">Create a ticket</Link></>
+      </p>}
+
+      {canManage && <div className="card customer-create-card">
+        <div className="customer-create-header">
+          <h5>Create customer</h5>
+          <p>Add contact details and their first device.</p>
+        </div>
+        <form onSubmit={create} className="customer-create-form">
+          <div className="customer-create-sections">
+            <section aria-labelledby="customer-contact-heading" className="customer-form-section">
+              <div className="customer-section-heading">
+                <h6 id="customer-contact-heading">Customer information</h6>
+                <p>Organization and contact details</p>
+              </div>
+              <div className="customer-fields">
+                {[
+                  ["name", "Name", "Full name", true],
+                  ["email", "Email", "name@example.com", false],
+                  ["phone", "Phone", "+212 600 000 000", false],
+                  ["company", "Company", "Company name", false],
+                  ["address", "Address", "Street, city, postal code", false],
+                ].map(([key, label, placeholder, required]) => (
+                  <label key={key} className={`customer-field${key === "address" ? " customer-field-wide" : ""}`}>
+                    <span>{label}{required && <span className="customer-required"> *</span>}</span>
+                    <input type={key === "phone" ? "tel" : "text"} placeholder={placeholder} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={required} disabled={saving} />
+                  </label>
+                ))}
+              </div>
+            </section>
+            <section aria-labelledby="customer-device-heading" className="customer-form-section customer-device-section">
+              <div className="customer-section-heading">
+                <h6 id="customer-device-heading">Device information</h6>
+                <p>Available immediately for support tickets</p>
+              </div>
+              <div className="customer-fields">
+                <label className="customer-field customer-field-wide">
+                  <span>Device type<span className="customer-required"> *</span></span>
+                  <select value={device.device_type} onChange={(e) => setDevice({ ...device, device_type: e.target.value })} required disabled={saving}>
+                    {["Laptop", "Desktop", "Printer", "Server", "Phone", "Tablet", "Network equipment", "Other"].map((type) => <option key={type}>{type}</option>)}
+                  </select>
+                </label>
+                {[
+                  ["manufacturer", "Manufacturer", "e.g. Dell", true],
+                  ["model", "Model", "e.g. Latitude 5520", true],
+                  ["serial_number", "Serial number", "Device serial number", false],
+                  ["operating_system", "Operating system", "e.g. Windows 11", false],
+                ].map(([key, label, placeholder, required]) => (
+                  <label key={key} className="customer-field">
+                    <span>{label}{required && <span className="customer-required"> *</span>}</span>
+                    <input placeholder={placeholder} value={device[key]} onChange={(e) => setDevice({ ...device, [key]: e.target.value })} required={required} disabled={saving} />
+                  </label>
+                ))}
+              </div>
+            </section>
+          </div>
+          <div className="customer-create-footer">
+            <p><span className="customer-required">*</span> Required fields</p>
+            <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving…" : "Create customer and device"}</button>
+          </div>
         </form>
       </div>}
 

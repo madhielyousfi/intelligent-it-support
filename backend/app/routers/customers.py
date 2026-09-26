@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models import Customer, Ticket, User
+from app.models import Customer, Device, Ticket, User
 from app.schemas import CustomerCreate, CustomerOut, CustomerUpdate
 from app.services import get_current_user, require_roles
 
@@ -33,9 +33,16 @@ def get_accessible_customer(customer_id: int, user: User, db: Session) -> Custom
 def create_customer(payload: CustomerCreate, db: Session = Depends(get_db), _: User = Depends(require_roles("admin"))):
     if payload.user_id is not None and not db.get(User, payload.user_id):
         raise HTTPException(status_code=400, detail="user_id does not exist")
-    customer = Customer(**payload.model_dump())
+    customer = Customer(**payload.model_dump(exclude={"device"}))
     db.add(customer)
-    db.commit()
+    try:
+        db.flush()
+        if payload.device is not None:
+            db.add(Device(customer_id=customer.id, **payload.device.model_dump()))
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Customer and device could not be saved. Check for duplicate device details.")
     db.refresh(customer)
     return customer
 

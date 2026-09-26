@@ -1,0 +1,31 @@
+.card.customer-create-card { margin-bottom: 32px; padding: 0; overflow: hidden; }
+.customer-create-header { padding: 24px 28px; border-bottom: 1px solid var(--hairline); }
+.customer-create-header p { margin-top: 6px; color: var(--text-muted); font-size: 14px; }
+.customer-create-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.customer-form-section { min-width: 0; padding: 28px; }
+.customer-device-section { border-left: 1px solid var(--hairline); }
+.customer-section-heading { margin-bottom: 22px; }
+.customer-section-heading h6 { font-size: 16px; font-weight: 600; }
+.customer-section-heading p { margin-top: 5px; font-size: 12px; color: var(--text-muted); }
+.customer-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+.customer-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.customer-field > span { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.customer-field input, .customer-field select { min-width: 0; font-size: 14px; border-radius: 12px; padding: 12px; height: 44px; }
+.customer-field select { padding-right: 36px; }
+.customer-field-wide { grid-column: 1 / -1; }
+.customer-required { color: var(--accent); }
+.customer-create-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 28px; border-top: 1px solid var(--hairline); background: var(--canvas-soft); }
+.customer-create-footer p { font-size: 12px; color: var(--text-muted); }
+.customer-create-footer button { font-size: 14px; padding: 12px 20px; }
+.customer-created-message { padding: 16px 20px; margin-bottom: 20px; border: 1px solid var(--hairline); border-radius: 16px; font-size: 14px; }
+.customer-created-message a { margin-left: 8px; color: var(--accent); }
+@media (max-width: 1199px) {
+  .customer-create-sections { grid-template-columns: minmax(0, 1fr); }
+  .customer-device-section { border-left: 0; border-top: 1px solid var(--hairline); }
+}
+@media (max-width: 640px) {
+  .customer-create-header, .customer-form-section { padding: 20px; }
+  .customer-fields { grid-template-columns: minmax(0, 1fr); }
+  .customer-create-footer { align-items: stretch; flex-direction: column; padding: 20px; }
+  .customer-create-footer button { width: 100%; }
+}

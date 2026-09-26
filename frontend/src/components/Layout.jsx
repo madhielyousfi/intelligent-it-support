@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import "./Layout.css";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -29,23 +30,14 @@ export default function Layout({ children }) {
   const visible = navItems.filter((n) => !n.roles || n.roles.includes(role));
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside
-        style={{
-          width: 240,
-          padding: "32px 24px",
-          borderRight: "1px solid var(--hairline)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-          flexShrink: 0,
-        }}
-      >
+    <div className="app-shell">
+      <aside className="app-sidebar" aria-label="Sidebar">
         <div style={{ marginBottom: 32 }}>
           <span style={{ fontSize: 20, fontWeight: 652, letterSpacing: "-0.02em", color: "var(--ink)" }}>ITSM</span>
           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-faint)", marginLeft: 8, verticalAlign: "super" }}>MVP</span>
         </div>
 
+        <nav className="app-sidebar-nav" aria-label="Main navigation">
         {visible.map((item) => (
           <NavLink
             key={item.to}
@@ -67,7 +59,9 @@ export default function Layout({ children }) {
           </NavLink>
         ))}
 
-        <div style={{ flex: 1 }} />
+        </nav>
+
+        <div className="app-sidebar-footer">
 
         {role && (
           <div style={{ padding: "8px 16px", marginBottom: 8 }}>
@@ -76,10 +70,11 @@ export default function Layout({ children }) {
         )}
 
         <button onClick={logout} className="btn-soft" style={{ width: "100%" }}>Logout</button>
+        </div>
       </aside>
 
-      <main style={{ flex: 1, padding: "48px 56px", maxWidth: 960, animation: "fadeIn 0.2s ease-out" }}>
-        {children}
+      <main className="app-main" tabIndex={0} aria-label="Page content">
+        <div className="app-main-content">{children}</div>
       </main>
     </div>
   );

@@ -11,8 +11,7 @@ export default function Tickets() {
   const [priority, setPriority] = useState("");
   const [search, setSearch] = useState("");
   const [technicianId, setTechnicianId] = useState("");
-  const [createdFrom, setCreatedFrom] = useState("");
-  const [createdTo, setCreatedTo] = useState("");
+  const [createdDate, setCreatedDate] = useState("");
   const [technicians, setTechnicians] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -25,10 +24,11 @@ export default function Tickets() {
   } catch {}
   const canFilterByTechnician = ["admin", "manager"].includes(role);
 
-  const load = async (s, p, q, tech, from, to, requestedPage) => {
+  const load = async (s, p, q, tech, date, requestedPage) => {
     try {
       const result = await api.listTickets(s || undefined, p || undefined, undefined, q || undefined, {
-        technicianId: tech || undefined, createdFrom: from || undefined, createdTo: to || undefined,
+        technicianId: tech || undefined,
+        createdDate: date || undefined,
         page: requestedPage, pageSize: 10, withMeta: true,
       });
       setItems(result.items);
@@ -39,9 +39,9 @@ export default function Tickets() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => load(status, priority, search, technicianId, createdFrom, createdTo, page), 250);
+    const timer = setTimeout(() => load(status, priority, search, technicianId, createdDate, page), 250);
     return () => clearTimeout(timer);
-  }, [status, priority, search, technicianId, createdFrom, createdTo, page]);
+  }, [status, priority, search, technicianId, createdDate, page]);
 
   useEffect(() => {
     if (canFilterByTechnician) api.listTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
@@ -90,8 +90,17 @@ export default function Tickets() {
         <option value="">All technicians</option>
         {technicians.map((tech) => <option key={tech.id} value={tech.id}>{tech.full_name}</option>)}
       </select>}
-      <input type="date" aria-label="Created from" value={createdFrom} onChange={resetToFirstPage(setCreatedFrom)} title="Created from" />
-      <input type="date" aria-label="Created to" value={createdTo} onChange={resetToFirstPage(setCreatedTo)} title="Created to" />
+      <label style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-muted)", fontSize: 14 }}>
+        Created on
+        <input
+          type="date"
+          aria-label="Created on"
+          value={createdDate}
+          onChange={resetToFirstPage(setCreatedDate)}
+          title="Created on"
+          style={{ width: 180, boxSizing: "border-box" }}
+        />
+      </label>
       </div>
 
       {error && <p className="error-msg" style={{ marginBottom: 16 }}>{error}</p>}

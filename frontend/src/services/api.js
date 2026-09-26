@@ -57,8 +57,12 @@ export const api = {
     if (customerId) params.set("customer_id", customerId);
     if (search) params.set("search", search);
     if (options.technicianId) params.set("technician_id", options.technicianId);
-    if (options.createdFrom) params.set("created_from", options.createdFrom);
-    if (options.createdTo) params.set("created_to", options.createdTo);
+    // The API uses inclusive range parameters; one selected date becomes an
+    // exact calendar-day filter without exposing duplicate controls in the UI.
+    if (options.createdDate) {
+      params.set("created_from", options.createdDate);
+      params.set("created_to", options.createdDate);
+    }
     if (options.page) params.set("page", options.page);
     if (options.pageSize) params.set("page_size", options.pageSize);
     const query = params.toString();
