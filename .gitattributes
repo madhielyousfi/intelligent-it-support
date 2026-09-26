@@ -1,0 +1,2 @@
+# Keep Windows launcher bytes unchanged and recognize CRLF line endings.
+*.bat -text whitespace=cr-at-eol
